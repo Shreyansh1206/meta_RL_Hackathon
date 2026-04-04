@@ -1,0 +1,19 @@
+<routes>
+    <vType id="standard_car" accel="2.6" decel="4.5" sigma="0.5" length="5" maxSpeed="50" />
+    
+    <route id="route_east" edges="hw_w2il hw_il2ir hw_ir2e" />
+    <route id="route_west" edges="hw_e2ir hw_ir2il hw_il2w" />
+    <route id="route_art1_south" edges="art1_n2ped1n ped1n2il il2ped1s ped1s2art1_s" />
+    <route id="route_art1_north" edges="art1_s2ped1s ped1s2il il2ped1n ped1n2art1_n" />
+    <route id="route_art2_south" edges="art2_n2ped2n ped2n2ir ir2ped2s ped2s2art2_s" />
+    <route id="route_art2_north" edges="art2_s2ped2s ped2s2ir ir2ped2n ped2n2art2_n" />
+    
+    <!-- Spawning rates adjusted to match RL Spawn Rate (0.25 cars per 5-sec step) -->
+    <!-- 0.25 / 5 = 0.05 probability per second -->
+    <flow id="flow_east" type="standard_car" route="route_east" begin="0" end="3600" probability="0.05" />
+    <flow id="flow_west" type="standard_car" route="route_west" begin="0" end="3600" probability="0.05" />
+    <flow id="flow_art1_s" type="standard_car" route="route_art1_south" begin="0" end="3600" probability="0.05" />
+    <flow id="flow_art1_n" type="standard_car" route="route_art1_north" begin="0" end="3600" probability="0.05" />
+    <flow id="flow_art2_s" type="standard_car" route="route_art2_south" begin="0" end="3600" probability="0.05" />
+    <flow id="flow_art2_n" type="standard_car" route="route_art2_north" begin="0" end="3600" probability="0.05" />
+</routes>
