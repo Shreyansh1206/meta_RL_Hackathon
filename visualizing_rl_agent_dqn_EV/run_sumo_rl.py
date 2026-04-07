@@ -13,7 +13,7 @@ import numpy as np
 import traci
 from agent import DQNAgent
 from visualize import TrafficRenderer
-from config import MAX_QUEUE, CORRIDOR_DELAY
+from config import MAX_QUEUE, CORRIDOR_DELAY, MIN_GREEN_STEPS
 
 # ──────────────────────────────────────────────────────────────────────────────
 # CONFIGURATION & MAPPING
@@ -49,7 +49,6 @@ ARMS_MAPPING = {
 CORRIDORS = {"0to1": ["hw_il2ir"], "1to0": ["hw_ir2il"]}
 
 # Phase Mapping: RL 0 (NS Green) -> SUMO 2, RL 1 (EW Green) -> SUMO 0
-# FIX: SUMO netconvert assigns Phase 0 to the main road (Highway EW) and Phase 2 to the minor road (Arterials NS).
 SUMO_PHASE_NS_GREEN = 2
 SUMO_PHASE_EW_GREEN = 0
 
@@ -88,7 +87,7 @@ def get_queue_lengths(intersection_id):
             veh_ids = traci.lane.getLastStepVehicleIDs(lane)
             for veh in veh_ids:
                 if traci.vehicle.getSpeed(veh) < 0.1:  # Halting threshold
-                    if traci.vehicle.getVehicleClass(veh) == "emergency":
+                    if traci.vehicle.getTypeID(veh) == "emergency_car":
                         ev_halted += 1
                     else:
                         std_halted += 1
@@ -98,6 +97,12 @@ def get_queue_lengths(intersection_id):
 
 
 def get_corridor_states(corridor_id):
+    """Count ONLY standard vehicles in corridors (exclude EVs).
+    
+    This matches the training env where corridor_0to1/1to0 only track
+    standard vehicles. EV corridors exist separately in training but
+    are NOT part of the observation vector.
+    """
     edges = CORRIDORS[corridor_id]
     segment_counts = [0.0] * CORRIDOR_DELAY
     for edge in edges:
@@ -108,6 +113,9 @@ def get_corridor_states(corridor_id):
             lane_id = f"{edge}_{l_idx}"
             vehicles = traci.lane.getLastStepVehicleIDs(lane_id)
             for veh in vehicles:
+                # Skip emergency vehicles — training corridors only track standard cars
+                if traci.vehicle.getTypeID(veh) == "emergency_car":
+                    continue
                 pos = traci.vehicle.getLanePosition(veh)
                 seg_idx = min(int(pos / seg_len), CORRIDOR_DELAY - 1)
                 segment_counts[seg_idx] += 1.0
@@ -138,11 +146,19 @@ def run_simulation():
     except Exception:
         pass
 
+    # ── FIX: Set initial SUMO phases to match training env's reset() ──────
+    # Training env resets with phases=[0,0] (both NS green).
+    # SUMO starts with its default program phase 0 = EW green.
+    # We MUST sync SUMO to RL's initial state before collecting any observations.
+    for intersection_id in INTERSECTIONS:
+        traci.trafficlight.setPhase(intersection_id, SUMO_PHASE_NS_GREEN)
+        traci.trafficlight.setPhaseDuration(intersection_id, 9999)
+
     step = 0
     total_waiting_time = 0
     total_cars_arrived = 0
     time_in_phase = [0, 0]
-    current_phases_rl = [0, 0]
+    current_phases_rl = [0, 0]  # Both start NS green, matching training reset()
 
     print(
         "Simulation started. Use the Pygame window to see the model's internal view and SUMO for physical view."
@@ -165,7 +181,6 @@ def run_simulation():
             c0to1 = get_corridor_states("0to1")
             c1to0 = get_corridor_states("1to0")
             mock_env.corridor_0to1 = c0to1
-            # The renderer might expect list or deque, just using list
             mock_env.corridor_1to0 = c1to0
 
             obs.extend(c0to1)
@@ -178,7 +193,8 @@ def run_simulation():
             # --- APPLY ACTIONS ---
             target_phases_rl = [action >> 1, action & 1]
             for i, intersection_id in enumerate(INTERSECTIONS):
-                if target_phases_rl[i] != current_phases_rl[i]:
+                if (target_phases_rl[i] != current_phases_rl[i]
+                        and time_in_phase[i] >= MIN_GREEN_STEPS):
                     current_phases_rl[i] = target_phases_rl[i]
                     time_in_phase[i] = 0
                 else:
@@ -190,6 +206,8 @@ def run_simulation():
                     else SUMO_PHASE_EW_GREEN
                 )
                 traci.trafficlight.setPhase(intersection_id, sumo_phase)
+                # Lock phase duration so SUMO doesn't auto-advance to yellow
+                traci.trafficlight.setPhaseDuration(intersection_id, 9999)
                 mock_env.phases[i] = current_phases_rl[i]
 
             # --- RENDERER (Original Pygame View from visualize.py) ---
@@ -204,10 +222,18 @@ def run_simulation():
                 total_cars_arrived += traci.simulation.getArrivedNumber()
 
             step += 1
-            max_q_arm = np.max(mock_env.queues)  # The maximum queue across all 8 arms
+            max_q_arm = np.max(mock_env.queues)
             if step % 10 == 0:
+                ev_total = int(mock_env.ev_queues.sum())
                 print(
-                    f"Step {step} | Max Arm Queue: {int(max_q_arm)}/20 | Total (8 arms): {(int(mock_env.queues.sum()))} | Discharged: {total_cars_arrived}"
+                    f"Step {step:4d} | "
+                    f"Max Q: {int(max_q_arm):2d}/20 | "
+                    f"Std: {int(mock_env.queues.sum()):3d} | "
+                    f"EV: {ev_total} | "
+                    f"Phase: [{current_phases_rl[0]}{'=NS' if current_phases_rl[0]==0 else '=EW'}, "
+                    f"{current_phases_rl[1]}{'=NS' if current_phases_rl[1]==0 else '=EW'}] | "
+                    f"TiP: {time_in_phase} | "
+                    f"Discharged: {total_cars_arrived}"
                 )
 
             # Safety: If SUMO is jammed, don't let it run forever
@@ -219,7 +245,9 @@ def run_simulation():
     except traci.exceptions.FatalTraCIError:
         print("Simulation closed by user.")
     except Exception as e:
+        import traceback
         print(f"An error occurred: {e}")
+        traceback.print_exc()
     finally:
         try:
             traci.close()

@@ -413,6 +413,8 @@ COLORS = {
     "E": (80, 80, 255),   # Blue-ish
     "W": (255, 255, 80)   # Yellow-ish
 }
+COLOR_EV = (255, 40, 40)       # Bright red for emergency vehicles
+COLOR_EV_SIREN = (40, 100, 255) # Blue siren accent
 
 class TrafficRenderer:
     def __init__(self):
@@ -422,14 +424,24 @@ class TrafficRenderer:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("Consolas", 20, bold=True)
 
-    def _draw_car(self, x, y, direction):
+    def _draw_car(self, x, y, direction, is_ev=False):
         """Draws a car with headlights to show direction."""
-        color = COLORS.get(direction, (200, 200, 200))
+        if is_ev:
+            color = COLOR_EV
+        else:
+            color = COLORS.get(direction, (200, 200, 200))
         w, h = (CAR_WIDTH, CAR_HEIGHT) if direction in ["E", "W"] else (CAR_HEIGHT, CAR_WIDTH)
             
         rect = pygame.Rect(x - w//2, y - h//2, w, h)
         pygame.draw.rect(self.screen, color, rect, border_radius=3)
-        pygame.draw.rect(self.screen, (0, 0, 0), rect, 1, border_radius=3) 
+        if is_ev:
+            # Thick white border + siren light to make EVs visually distinct
+            pygame.draw.rect(self.screen, (255, 255, 255), rect, 2, border_radius=3)
+            # Blue siren on top
+            siren_x, siren_y = x, y
+            pygame.draw.circle(self.screen, COLOR_EV_SIREN, (int(siren_x), int(siren_y)), 3)
+        else:
+            pygame.draw.rect(self.screen, (0, 0, 0), rect, 1, border_radius=3) 
 
         # Headlights
         headlight_color = (255, 255, 200)
@@ -457,34 +469,63 @@ class TrafficRenderer:
             pygame.draw.rect(self.screen, COLOR_ROAD, (x - ROAD_WIDTH//2, 0, ROAD_WIDTH, SCREEN_HEIGHT))
             pygame.draw.line(self.screen, COLOR_MARKING, (x, 0), (x, SCREEN_HEIGHT), 2)
 
-        # 2. Draw Queued & "Approaching" Cars
-        # We calculate positions starting from the edge of the screen to avoid pops
+        # 2. Draw Queued & "Approaching" Cars (standard + EV)
+        has_ev = hasattr(env, 'ev_queues') and env.ev_queues is not None
         for i, x_center in enumerate([il_x, ir_x]):
             q = env.queues[i]
-            
+            eq = env.ev_queues[i] if has_ev else [0, 0, 0, 0]
+
             # North Arm (S-bound) - Entering from top edge
+            pos = 0
             for k in range(int(q[0])):
-                self._draw_car(x_center + lane_offset, (mid_y - ROAD_WIDTH//2 - 20) - (k*25), "S")
-            
+                self._draw_car(x_center + lane_offset, (mid_y - ROAD_WIDTH//2 - 20) - (pos*25), "S")
+                pos += 1
+            for k in range(int(eq[0])):
+                self._draw_car(x_center + lane_offset, (mid_y - ROAD_WIDTH//2 - 20) - (pos*25), "S", is_ev=True)
+                pos += 1
+
             # South Arm (N-bound) - Entering from bottom edge
+            pos = 0
             for k in range(int(q[1])):
-                self._draw_car(x_center - lane_offset, (mid_y + ROAD_WIDTH//2 + 20) + (k*25), "N")
+                self._draw_car(x_center - lane_offset, (mid_y + ROAD_WIDTH//2 + 20) + (pos*25), "N")
+                pos += 1
+            for k in range(int(eq[1])):
+                self._draw_car(x_center - lane_offset, (mid_y + ROAD_WIDTH//2 + 20) + (pos*25), "N", is_ev=True)
+                pos += 1
 
             # East Arm (W-bound) - IR enters from right edge; IL gets from corridor
+            pos = 0
             if i == 1: # Intersection Right
                 for k in range(int(q[2])):
-                    self._draw_car(SCREEN_WIDTH - 20 - (k*25), mid_y - lane_offset, "W")
+                    self._draw_car(SCREEN_WIDTH - 20 - (pos*25), mid_y - lane_offset, "W")
+                    pos += 1
+                for k in range(int(eq[2])):
+                    self._draw_car(SCREEN_WIDTH - 20 - (pos*25), mid_y - lane_offset, "W", is_ev=True)
+                    pos += 1
             else: # Intersection Left
                 for k in range(int(q[2])):
-                    self._draw_car(x_center + ROAD_WIDTH//2 + 20 + (k*25), mid_y - lane_offset, "W")
+                    self._draw_car(x_center + ROAD_WIDTH//2 + 20 + (pos*25), mid_y - lane_offset, "W")
+                    pos += 1
+                for k in range(int(eq[2])):
+                    self._draw_car(x_center + ROAD_WIDTH//2 + 20 + (pos*25), mid_y - lane_offset, "W", is_ev=True)
+                    pos += 1
 
             # West Arm (E-bound) - IL enters from left edge; IR gets from corridor
+            pos = 0
             if i == 0: # Intersection Left
                 for k in range(int(q[3])):
-                    self._draw_car(20 + (k*25), mid_y + lane_offset, "E")
+                    self._draw_car(20 + (pos*25), mid_y + lane_offset, "E")
+                    pos += 1
+                for k in range(int(eq[3])):
+                    self._draw_car(20 + (pos*25), mid_y + lane_offset, "E", is_ev=True)
+                    pos += 1
             else: # Intersection Right
                 for k in range(int(q[3])):
-                    self._draw_car(x_center - ROAD_WIDTH//2 - 20 - (k*25), mid_y + lane_offset, "E")
+                    self._draw_car(x_center - ROAD_WIDTH//2 - 20 - (pos*25), mid_y + lane_offset, "E")
+                    pos += 1
+                for k in range(int(eq[3])):
+                    self._draw_car(x_center - ROAD_WIDTH//2 - 20 - (pos*25), mid_y + lane_offset, "E", is_ev=True)
+                    pos += 1
 
             # 3. Traffic Lights
             p = env.phases[i]
@@ -506,11 +547,62 @@ class TrafficRenderer:
                 self._draw_car(cx, mid_y - lane_offset, "W")
 
         # 5. UI Stats
-        info = self.font.render(f"STEP: {env.step_count} | TOTAL QUEUED: {int(env.queues.sum())}", True, COLOR_TEXT)
+        ev_total = int(env.ev_queues.sum()) if has_ev else 0
+        info = self.font.render(
+            f"STEP: {env.step_count} | STD QUEUED: {int(env.queues.sum())} | EV QUEUED: {ev_total}",
+            True, COLOR_TEXT
+        )
         self.screen.blit(info, (20, 20))
+        if ev_total > 0:
+            ev_warn = self.font.render("⚠ EMERGENCY VEHICLES WAITING", True, COLOR_EV)
+            self.screen.blit(ev_warn, (20, 50))
 
         pygame.display.flip()
         self.clock.tick(FPS)
 
     def close(self):
         pygame.quit()
+
+if __name__ == "__main__":
+    # ──────────────────────────────────────────────────────────────────────────
+    # Mock Demo Mode
+    # Use this to verify the UI and EV rendering without running a full simulation
+    # ──────────────────────────────────────────────────────────────────────────
+    import numpy as np
+    print("Starting Traffic RL Visualization Demo...")
+    print("Close the window or press Ctrl+C to exit.")
+
+    class MockEnv:
+        def __init__(self):
+            self.queues = np.zeros((2, 4), dtype=np.int32)
+            self.ev_queues = np.zeros((2, 4), dtype=np.int32)
+            self.phases = np.zeros(2, dtype=np.int32)
+            self.step_count = 0
+            self.corridor_0to1 = [0, 0, 0, 0, 0]
+            self.corridor_1to0 = [0, 0, 0, 0, 0]
+
+    renderer = TrafficRenderer()
+    env = MockEnv()
+    
+    try:
+        running = True
+        while running:
+            env.step_count += 1
+            
+            # Randomly update queues and phases for the demo
+            if env.step_count % 5 == 0:
+                env.phases = np.random.randint(0, 2, 2)
+                env.queues = np.random.randint(0, 8, (2, 4))
+                # 20% chance of an EV appearing in any arm
+                env.ev_queues = (np.random.random((2, 4)) < 0.2).astype(np.int32)
+            
+            renderer.draw(env)
+            # Add a small event loop to handle window closing
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+            
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        renderer.close()

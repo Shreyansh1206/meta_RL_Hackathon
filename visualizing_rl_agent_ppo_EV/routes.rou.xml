@@ -1,6 +1,6 @@
 <routes>
     <vType id="standard_car" accel="2.6" decel="4.5" sigma="0.5" length="5" maxSpeed="50" />
-    <vType id="emergency_car" vClass="emergency" color="red" accel="3.0" decel="5.0" sigma="0.5" length="5" maxSpeed="70" guiShape="emergency"/>
+    <vType id="emergency_car" vClass="custom1" color="red" accel="3.0" decel="5.0" sigma="0.5" length="5" maxSpeed="70" guiShape="emergency"/>
     
     <route id="route_east" edges="hw_w2il hw_il2ir hw_ir2e" />
     <route id="route_west" edges="hw_e2ir hw_ir2il hw_il2w" />

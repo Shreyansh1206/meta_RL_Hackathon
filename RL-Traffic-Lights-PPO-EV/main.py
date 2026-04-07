@@ -153,5 +153,5 @@ def evaluate_agent(agent_path=CHECKPOINT_PATH):
 
 
 if __name__ == "__main__":
-    train_agent()
-    # evaluate_agent()
+    # train_agent()
+    evaluate_agent()

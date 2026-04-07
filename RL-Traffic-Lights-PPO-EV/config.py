@@ -43,8 +43,8 @@ LR_GAMMA         = 0.9       # LR multiplier at each reduction
 
 
 # ── Training ────────────────────────────────────────────────────────────────
-TOTAL_TIMESTEPS  = 2_000_000 # total environment steps (≈ 500 episodes worth)
+TOTAL_TIMESTEPS  = 500_000 # total environment steps (≈ 500 episodes worth)
 EVAL_INTERVAL    = 50        # episodes between evaluations
 EVAL_EPISODES    = 5         # episodes per evaluation run
 LOG_INTERVAL     = 10        # episodes between console logs
-CHECKPOINT_PATH  = "best_traffic_agent_ppo.pth"
+CHECKPOINT_PATH  = "best_traffic_agent_ppo_ev.pth"

@@ -46,4 +46,4 @@ NUM_EPISODES     = 690     # total training episodes
 EVAL_INTERVAL    = 50        # episodes between evaluations
 EVAL_EPISODES    = 5         # episodes per evaluation run
 LOG_INTERVAL     = 10        # episodes between console logs
-CHECKPOINT_PATH  = "best_traffic_agent_dqn.pth"
+CHECKPOINT_PATH  = "best_traffic_agent_dqn_ev.pth"
