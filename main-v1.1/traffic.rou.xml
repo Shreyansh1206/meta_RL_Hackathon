@@ -1,0 +1,22 @@
+<routes>
+    <vType id="car" length="5" maxSpeed="13.89" guiShape="passenger"/>
+    <vType id="ambulance" length="5" maxSpeed="20" guiShape="bus" color="1,0,0"/>
+    <route id="r_east" edges="w_in middle0to1 e_out"/>
+    <route id="r_west" edges="e_in middle1to0 w_out"/>
+    <route id="r_n0" edges="s0_in middle0to1 e_out"/>
+    <route id="r_s0" edges="n0_in middle0to1 e_out"/>
+    <route id="r_n1" edges="s1_in middle1to0 w_out"/>
+    <route id="r_s1" edges="n1_in middle1to0 w_out"/>
+    <flow id="fE" type="car" begin="0" end="3600" vehsPerHour="600" from="w_in" to="e_out"/>
+    <flow id="fW" type="car" begin="0" end="3600" vehsPerHour="600" from="e_in" to="w_out"/>
+    <flow id="fN0" type="car" begin="0" end="3600" vehsPerHour="300" from="s0_in" to="n0_out"/>
+    <flow id="fS0" type="car" begin="0" end="3600" vehsPerHour="300" from="n0_in" to="s0_out"/>
+    <flow id="fN1" type="car" begin="0" end="3600" vehsPerHour="300" from="s1_in" to="n1_out"/>
+    <flow id="fS1" type="car" begin="0" end="3600" vehsPerHour="300" from="n1_in" to="s1_out"/>
+    <flow id="fAE" type="ambulance" route="r_east" begin="0" end="3600" probability="0.0038888888888888888"/>
+    <flow id="fAW" type="ambulance" route="r_west" begin="0" end="3600" probability="0.0038888888888888888"/>
+    <flow id="fAN0" type="ambulance" route="r_n0" begin="0" end="3600" probability="0.0030555555555555557"/>
+    <flow id="fAS0" type="ambulance" route="r_s0" begin="0" end="3600" probability="0.0030555555555555557"/>
+    <flow id="fAN1" type="ambulance" route="r_n1" begin="0" end="3600" probability="0.0030555555555555557"/>
+    <flow id="fAS1" type="ambulance" route="r_s1" begin="0" end="3600" probability="0.0030555555555555557"/>
+</routes>

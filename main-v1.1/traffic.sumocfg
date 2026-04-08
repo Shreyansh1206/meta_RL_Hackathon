@@ -1,0 +1,4 @@
+<configuration>
+    <input><net-file value="traffic.net.xml"/><route-files value="traffic.rou.xml"/><additional-files value="traffic.poly.xml"/></input>
+    <gui_only><start value="true"/><quit-on-end value="true"/></gui_only>
+</configuration>

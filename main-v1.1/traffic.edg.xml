@@ -1,0 +1,16 @@
+<edges>
+    <edge id="middle0to1" from="IL" to="IR" numLanes="1" speed="13.89"/>
+    <edge id="middle1to0" from="IR" to="IL" numLanes="1" speed="13.89"/>
+    <edge id="w_in" from="west" to="IL" numLanes="1" speed="13.89"/>
+    <edge id="e_in" from="east" to="IR" numLanes="1" speed="13.89"/>
+    <edge id="n0_in" from="n0" to="IL" numLanes="1" speed="13.89"/>
+    <edge id="s0_in" from="s0" to="IL" numLanes="1" speed="13.89"/>
+    <edge id="n1_in" from="n1" to="IR" numLanes="1" speed="13.89"/>
+    <edge id="s1_in" from="s1" to="IR" numLanes="1" speed="13.89"/>
+    <edge id="w_out" from="IL" to="west" numLanes="1" speed="13.89"/>
+    <edge id="e_out" from="IR" to="east" numLanes="1" speed="13.89"/>
+    <edge id="n0_out" from="IL" to="n0" numLanes="1" speed="13.89"/>
+    <edge id="s0_out" from="IL" to="s0" numLanes="1" speed="13.89"/>
+    <edge id="n1_out" from="IR" to="n1" numLanes="1" speed="13.89"/>
+    <edge id="s1_out" from="IR" to="s1" numLanes="1" speed="13.89"/>
+</edges>
